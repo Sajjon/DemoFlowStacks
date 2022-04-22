@@ -13,9 +13,13 @@ import FlowStacks
 struct DemoFlowStacksApp: App {
 	var body: some Scene {
 		WindowGroup {
-			AppCoordinator()
-				.navigationViewStyle(.stack)
-				.environmentObject(AuthState())
+			VStack {
+				Text("`SetPIN` incorrectly backs to `Credentials`")
+				AppCoordinator()
+					.navigationViewStyle(.stack)
+					.environmentObject(AuthState())
+
+			}
 		}
 	}
 }
@@ -156,17 +160,26 @@ struct OnboardingCoordinator: View {
 				case .termsOfService:
 					TermsOfServiceView(accept: toSignUp)
 				case .signUpFlow:
-					NavigationView {
-						SignUpFlow(signedUpUser: toSetPIN)
-							.environmentObject(auth)
-					}
+					SignUpFlow(
+						// Set routes to `.push` instead of `.root` to make
+						// "flatten" the flow, into one single onboarding
+						// flow.
+						routes: [.push(.initial)],
+						signedUpUser: toSetPIN
+					)
+					.environmentObject(auth)
 				case .setPINflow(let user):
-					NavigationView {
-						SetPINFlow(user: user, doneSettingPIN: { maybePin in
+					SetPINFlow(
+						// Set routes to `.push` instead of `.root` to make
+						// "flatten" the flow, into one single onboarding
+						// flow.
+						routes: [.push(.initial)],
+						user: user,
+						doneSettingPIN: { maybePin in
 							doneSettingUser(user, andPIN: maybePin)
-						})
-						.environmentObject(auth)
-					}
+						}
+					)
+					.environmentObject(auth)
 				}
 			}
 		}
@@ -229,12 +242,25 @@ struct TermsOfServiceView: View {
 // MARK: - SignUp SubFlow (Onb.)
 struct SignUpFlow: View {
 	enum Screen {
+		static let initial: Self = .credentials
 		case credentials
 		case personalInfo(credentials: User.Credentials)
 	}
 	@EnvironmentObject var auth: AuthState
+	@State var routes: Routes<Screen>
 	let signedUpUser: (User) -> Void
-	@State var routes: Routes<Screen> = [.root(.credentials)]
+	
+	init(
+		// The sensible default value for `routes` is `.root(.initial)`, making
+		// this flow stand alone testable. However when this flow is a *subflow*
+		// of another flow (e.g. being subflow of Onboarding flow), we want to
+		// set `routes` to `.push(.initial)` instead.
+		routes: Routes<Screen> = [.root(.initial)],
+		signedUpUser: @escaping (User) -> Void
+	) {
+		self.routes = routes
+		self.signedUpUser = signedUpUser
+	}
 	
 	var body: some View {
 		Router($routes) { screen, _ in
@@ -317,14 +343,29 @@ struct PersonalInfoView: View {
 // MARK: - SetPIN SubFlow (Onb.)
 struct SetPINFlow: View {
 	enum Screen {
+		static let initial: Self = .pinOnce
 		case pinOnce
 		case confirmPIN(PIN)
 	}
 	@EnvironmentObject var auth: AuthState
+
+	@State var routes: Routes<Screen>
 	let user: User
 	let doneSettingPIN: (PIN?) -> Void
 	
-	@State var routes: Routes<Screen> = [.root(.pinOnce)]
+	init(
+		// The sensible default value for `routes` is `.root(.initial)`, making
+		// this flow stand alone testable. However when this flow is a *subflow*
+		// of another flow (e.g. being subflow of Onboarding flow), we want to
+		// set `routes` to `.push(.initial)` instead.
+		routes: Routes<Screen> = [.root(.initial)],
+		user: User,
+		doneSettingPIN: @escaping (PIN?) -> Void
+	) {
+		self.routes = routes
+		self.user = user
+		self.doneSettingPIN = doneSettingPIN
+	}
 	
 	var body: some View {
 		Router($routes) { screen, _ in
