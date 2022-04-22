@@ -161,19 +161,13 @@ struct OnboardingCoordinator: View {
 					TermsOfServiceView(accept: toSignUp)
 				case .signUpFlow:
 					SignUpFlow(
-						// Set routes to `.push` instead of `.root` to make
-						// "flatten" the flow, into one single onboarding
-						// flow.
-						routes: [.push(.initial)],
+						routes: [.root(.initial, embedInNavigationView: false)],
 						signedUpUser: toSetPIN
 					)
 					.environmentObject(auth)
 				case .setPINflow(let user):
 					SetPINFlow(
-						// Set routes to `.push` instead of `.root` to make
-						// "flatten" the flow, into one single onboarding
-						// flow.
-						routes: [.push(.initial)],
+						routes: [.root(.initial, embedInNavigationView: false)],
 						user: user,
 						doneSettingPIN: { maybePin in
 							doneSettingUser(user, andPIN: maybePin)
